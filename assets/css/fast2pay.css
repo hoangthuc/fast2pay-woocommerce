@@ -1,0 +1,19 @@
+.list-bank a{
+    width: 30%;
+    display: inline-block;
+    height: 30px;
+    position: relative;
+    padding: 3px;
+    cursor: pointer;
+    border: 2px solid #ddd;
+}
+.list-bank a:hover,
+.list-bank a.active{
+    border: 2px solid #5f59ff;
+}
+.list-bank a img {
+    object-fit: contain;
+    object-position: center;
+    height: 100%;
+    width: 100%;
+}
