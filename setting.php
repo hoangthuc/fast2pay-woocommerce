@@ -149,18 +149,45 @@
         $order = wc_get_order( $order_id );
 
         $status = 'wc-' === substr( $this->order_status, 0, 3 ) ? substr( $this->order_status, 3 ) : $this->order_status;
-
+        $fee_percent = 0;
+        $account_name = "Fast2Pay";
+        $transaction_id =  uniqid();
         $amount = floatval( preg_replace( '#[^\d.]#', '', WC()->cart->total ) );
-          $fast2pay = WC()->payment_gateways()->payment_gateways()['fast2pay'];
+        $amount = $amount / (1 - $fee_percent);
+        $fast2pay = WC()->payment_gateways()->payment_gateways()['fast2pay'];
 
-           $payment_url = wp_sprintf( __('https://bank.fast2pays.com/v1/partner/getATMCardPaymentURL?transaction_id=%s&amount=%s&hash=%s&bank=%s&app_id=%s&channel_id=%s&callback_uri=%s') ,$_POST['transaction_id'], $amount, sha1($fast2pay->app_id.":".$fast2pay->channel_id.":".$_POST['transaction_id'].":".$this->get_return_url( $order ).":".$amount.":".$_POST['bank']."::".$fast2pay->app_secret) , $_POST['bank'], $fast2pay->app_id, $fast2pay->channel_id, $this->get_return_url( $order ) );
+
+        $payment_url = wp_sprintf( __('https://bank.fast2pays.com/v1/partner/getVirtualAccount?app_id=%s&channel_id=%s&user_id=%s&transaction_id=%s&amount=%d&bank=%s&account_name=%s&hash=%s&callback_uri=%s') ,
+        $fast2pay->app_id, 
+        $fast2pay->channel_id,
+       1,
+        $transaction_id,
+        $amount,
+        $_POST['bank'],
+        $account_name,
+        sha1($fast2pay->app_id.":".$fast2pay->channel_id.":".$transaction_id.":".$amount.":".$_POST['bank']."::".$account_name.":".$fast2pay->app_secret),
+        $this->get_return_url( $order )
+       ); 
+
+
+        if($_POST['payment_type'] == 'getATMCardPaymentURL')
+        $payment_url = wp_sprintf( __('https://bank.fast2pays.com/v1/partner/getATMCardPaymentURL?transaction_id=%s&amount=%s&hash=%s&bank=%s&app_id=%s&channel_id=%s&callback_uri=%s') ,
+        $transaction_id, 
+        $amount, 
+        sha1($fast2pay->app_id.":".$fast2pay->channel_id.":".$transaction_id.":".$this->get_return_url( $order ).":".$amount.":".$_POST['bank']."::".$fast2pay->app_secret) , 
+        $_POST['bank'], 
+        $fast2pay->app_id, 
+        $fast2pay->channel_id, 
+        $this->get_return_url( $order ) 
+        );
+
             
         $response = wp_remote_get( $payment_url );
  
-          if ( is_array( $response ) && ! is_wp_error( $response ) ) {
+        if ( is_array( $response ) && ! is_wp_error( $response ) ) {
               $headers = $response['headers']; // array of http header lines
               $body    = json_decode($response['body']); // use the content
-          }
+        }
           
         return array(
         "result" => "success",

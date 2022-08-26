@@ -38,26 +38,64 @@ $banks = [
     ["symbol"=>"VISA", "name"=>"Visa","img"=>"assets/images/visa_logo.png"],
     ["symbol"=>"MASTERCARD", "name"=>"Mastercard","img"=>"assets/images/mastercard_logo.png"],
 ];
-$banksVa = [
-    ["symbol"=>"PVBANK", "name"=>"Vietnam Public Joint Stock Commercial Bank","img"=>"assets/images/pv_bank_logo.png"],
-    ["symbol"=>"WOORIBANK", "name"=>"Woori Bank Vietnam Limited","img"=>"assets/images/woori_bank_logo.png"],
-    ["symbol"=>"VIETCAPITALBANK", "name"=>"Viet Capital Commercial Joint Stock Bank","img"=>"assets/images/vietcapital_bank_logo.png"]
-];
+ $fast2pay = WC()->payment_gateways()->payment_gateways()['fast2pay'];
+if( isset( $_POST['payee_bank'] ) ):
+$fee = 5500;
+$transaction_id =  uniqid();
+$payee_pay_fee = true;
+$amount = ($_POST['amount'])?$_POST['amount']:0;
+$amount = round($amount - $fee);
+ $payment_url = wp_sprintf( __('https://bank.fast2pays.com/v1/partner/transfer?currency=VND&app_id=%s&channel_id=%s&transaction_id=%s&amount=%d&payee_bank=%s&payee_account=%s&payee_name=%s&hash=%s&message=1&payee_account_type=CARD_NUMBER') ,
+ $fast2pay->app_id, 
+ $fast2pay->channel_id,
+ $transaction_id,
+ $amount,
+ $_POST['payee_bank'],
+ $_POST['payee_account'],
+ $_POST['payee_name'],
+ sha1($fast2pay->app_id.":".$transaction_id.":".$amount.":".$_POST['payee_bank'].":".$_POST['payee_account'].":CARD_NUMBER:".$_POST['payee_name'].":0:".$fast2pay->channel_id."::VND:1:".$fast2pay->app_secret)
+);   
+
+$response = wp_remote_get( $payment_url );
+ if ( is_array( $response ) && ! is_wp_error( $response ) ) {
+       $headers = $response['headers']; // array of http header lines
+       $body    = json_decode($response['body']); // use the content
+       if( isset($body->error_code) && $body->error_code )echo '<ul class="woocommerce-error" role="alert"><li>'.$body->message.'</li></ul>';
+       if( isset($body->status) && $body->payment->status == "SUCCESS" )echo '<ul class="woocommerce-message" role="alert"><li>'.$body->payment->status.'</li></ul>';
+ }
+
+endif;
+
 ?>
-<div id="fast2pay_input">
-    <input type="hidden" name="transaction_id" value="<?= uniqid(); ?>" />
-    <input type="hidden" name="bank" value="" />
-    <input type="hidden" name="payment_type" value="" />
-    <h2 style="text-align: center; display: block;">ATM</h2>
+<div id="fast2pay_cashout">
     <div class="list-bank">
-       <?php foreach($banks as $bank): ?>
-        <a title="<?= $bank['name'] ?>" data-type="getATMCardPaymentURL" data-symbol="<?= $bank['symbol'] ?>" onclick="selectFast2Pay(this)" ><img src ="<?= F2P_URL.'/'.$bank['img'] ?>" /></a>
-        <?php endforeach; ?> 
-    </div>
-    <h2 style="text-align: center; display: block;">QR Code</h2>
-    <div class="list-bank">
-       <?php foreach($banksVa as $bank): ?>
-        <a title="<?= $bank['name'] ?>" data-type="getVirtualAccount" data-symbol="<?= $bank['symbol'] ?>" onclick="selectFast2Pay(this)" ><img src ="<?= F2P_URL.'/'.$bank['img'] ?>" /></a>
-        <?php endforeach; ?> 
-    </div>
+        <?php foreach($banks as $bank): ?>
+            <a title="<?= $bank['name'] ?>" data-symbol="<?= $bank['symbol'] ?>" onclick="selectFast2Pay(this,'#fast2pay_cashout','payee_bank')" ><img src ="<?= F2P_URL.'/'.$bank['img'] ?>" /></a>
+            <?php endforeach; ?> 
+        </div>
+    <form method="post">
+        <input type="hidden" name="payee_bank" value=""/>
+        <p class="form-row address-field validate-required form-row-wide">
+            <label>Card number</label>
+            <span class="woocommerce-input-wrapper">
+                <input type="text" class="input-text " name="payee_account" placeholder="The payee's card number" value="<?= isset($_POST['payee_account'])?$_POST['payee_account']:'' ?>">
+            </span>
+        </p>
+        <p class="form-row address-field validate-required form-row-wide">
+            <label>Payee Name</label>
+            <span class="woocommerce-input-wrapper">
+                <input type="text" class="input-text " name="payee_name" placeholder="Enter name of payee" value="<?= isset($_POST['payee_name'])?$_POST['payee_name']:'' ?>">
+            </span>
+        </p>
+        <p class="form-row address-field validate-required form-row-wide">
+            <label>Amount</label>
+            <span class="woocommerce-input-wrapper">
+                <input type="number" class="input-text " name="amount" placeholder="" value="<?= isset($_POST['amount'])?$_POST['amount']:'' ?>">
+            </span>
+        </p>
+        <p>
+        <button type="submit" class="button alt">Submit</button>
+        </p>
+</form>
 </div>
+

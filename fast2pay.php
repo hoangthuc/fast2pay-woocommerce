@@ -64,6 +64,28 @@ function fast2pay_webhookwebhook_slug($template) {
 
 function fast2pay_library_scripts() {    
     wp_enqueue_style( 'fast2pay-style', F2P_URL . '/assets/css/fast2pay.css', array(), '1.1', 'all');
+    wp_enqueue_script( 'sweetalert2-11', 'https://cdn.jsdelivr.net/npm/sweetalert2@11', array ( ), 1.1, true);
     wp_enqueue_script( 'fast2pay-script', F2P_URL . '/assets/js/fast2pay.js', array ( ), 1.1, true);
   }
   add_action( 'wp_enqueue_scripts', 'fast2pay_library_scripts' );
+
+  //shortcode cashout tranfer
+  add_shortcode('fast2pay_cashout','f_fast2pay_cashout');
+function f_fast2pay_cashout(){
+    ob_start();
+    include_once(plugin_dir_path( __FILE__ ) . 'templates/cashout_frontend.php');
+    $content = ob_get_contents();
+    ob_end_clean();
+    return $content;
+}
+
+
+  //shortcode cashout Virtual Account
+  add_shortcode('fast2pay_cashout_va','f_fast2pay_cashout_va');
+function f_fast2pay_cashout_va(){
+    ob_start();
+    include_once(plugin_dir_path( __FILE__ ) . 'templates/cashout_frontend_va.php');
+    $content = ob_get_contents();
+    ob_end_clean();
+    return $content;
+}
