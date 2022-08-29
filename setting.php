@@ -27,6 +27,9 @@
         $this->callback_uri = $this->get_option( 'callback_uri' );
         $this->channel_id = $this->get_option( 'channel_id' );
         $this->fast2pay_webhook = $this->get_option('fast2pay_webhook');
+        $this->currency_text = $this->get_option('currency_text');
+        $this->fast2pay_currency_vnd = $this->get_option('fast2pay_currency_vnd');
+        $this->fast2pay_sanbox = $this->get_option('fast2pay_sanbox');
         $this->description = $this->get_option('description');
         $this->order_status = $this->get_option( 'order_status', 'completed' );
 
@@ -108,6 +111,27 @@
                 'placeholder'     => __('fast2pay_webhook', $this->domain),
                 'desc_tip'    => true,
             ),
+            'currency_text' => array(
+                'title'       => __( 'Currency symbol', $this->domain ),
+                'type'        => 'text',
+                'description' => __( 'Enter symbol', $this->domain ),
+                'placeholder'     => __('USD', $this->domain),
+                'desc_tip'    => true,
+            ),
+            'fast2pay_currency_vnd' => array(
+                'title'       => __( 'Exchange rate of VietNam', $this->domain ),
+                'type'        => 'text',
+                'description' => __( 'Enter number VND', $this->domain ),
+                'placeholder'     => __('23000', $this->domain),
+                'desc_tip'    => true,
+            ),
+            'fast2pay_sanbox' => array(
+                'title'   => __( 'Sanbox Payment', $this->domain ),
+                'type'    => 'checkbox',
+                'label'   => __( 'Enable sanbox Payment', $this->domain ),
+                'default' => 'yes'
+            ),
+
         );
     }
 
@@ -147,17 +171,20 @@
     public function process_payment( $order_id ) {
 
         $order = wc_get_order( $order_id );
-
         $status = 'wc-' === substr( $this->order_status, 0, 3 ) ? substr( $this->order_status, 3 ) : $this->order_status;
         $fee_percent = 0;
         $account_name = "Fast2Pay";
         $transaction_id =  uniqid();
-        $amount = floatval( preg_replace( '#[^\d.]#', '', WC()->cart->total ) );
-        $amount = $amount / (1 - $fee_percent);
+        $currency_amount = floatval( preg_replace( '#[^\d.]#', '', WC()->cart->total ) );
+        $currency_amount = $currency_amount / (1 - $fee_percent);
         $fast2pay = WC()->payment_gateways()->payment_gateways()['fast2pay'];
+        $fast2pay_currency_vnd = $fast2pay->fast2pay_currency_vnd;
+        $currency_text = $fast2pay->currency_text;
+        $amount = $currency_amount*$fast2pay_currency_vnd;
 
+        $currency_amount = ($currency_text=='VND')?'':'&currency_amount='.$currency_amount;
 
-        $payment_url = wp_sprintf( __('https://bank.fast2pays.com/v1/partner/getVirtualAccount?app_id=%s&channel_id=%s&user_id=%s&transaction_id=%s&amount=%d&bank=%s&account_name=%s&hash=%s&callback_uri=%s') ,
+        $payment_url = wp_sprintf( __('https://bank.fast2pays.com/v1/partner/getVirtualAccount?app_id=%s&channel_id=%s&user_id=%s&transaction_id=%s&amount=%d&bank=%s&account_name=%s&hash=%s&callback_uri=%s&currency_text=%s'.$currency_amount) ,
         $fast2pay->app_id, 
         $fast2pay->channel_id,
        1,
@@ -166,19 +193,21 @@
         $_POST['bank'],
         $account_name,
         sha1($fast2pay->app_id.":".$fast2pay->channel_id.":".$transaction_id.":".$amount.":".$_POST['bank']."::".$account_name.":".$fast2pay->app_secret),
-        $this->get_return_url( $order )
+        $this->get_return_url( $order ),
+        $currency_text
        ); 
 
 
         if($_POST['payment_type'] == 'getATMCardPaymentURL')
-        $payment_url = wp_sprintf( __('https://bank.fast2pays.com/v1/partner/getATMCardPaymentURL?transaction_id=%s&amount=%s&hash=%s&bank=%s&app_id=%s&channel_id=%s&callback_uri=%s') ,
+        $payment_url = wp_sprintf( __('https://bank.fast2pays.com/v1/partner/getATMCardPaymentURL?transaction_id=%s&amount=%s&hash=%s&bank=%s&app_id=%s&channel_id=%s&callback_uri=%s&currency_text=%s'.$currency_amount) ,
         $transaction_id, 
         $amount, 
         sha1($fast2pay->app_id.":".$fast2pay->channel_id.":".$transaction_id.":".$this->get_return_url( $order ).":".$amount.":".$_POST['bank']."::".$fast2pay->app_secret) , 
         $_POST['bank'], 
         $fast2pay->app_id, 
         $fast2pay->channel_id, 
-        $this->get_return_url( $order ) 
+        $this->get_return_url( $order ),
+        $currency_text
         );
 
             

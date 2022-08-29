@@ -45,7 +45,7 @@ $transaction_id =  uniqid();
 $payee_pay_fee = true;
 $amount = ($_POST['amount'])?$_POST['amount']:0;
 $amount = round($amount - $fee);
- $payment_url = wp_sprintf( __('https://bank.fast2pays.com/v1/partner/transfer?currency=VND&app_id=%s&channel_id=%s&transaction_id=%s&amount=%d&payee_bank=%s&payee_account=%s&payee_name=%s&hash=%s&message=1&payee_account_type=CARD_NUMBER') ,
+ $payment_url = wp_sprintf( __('https://bank.fast2pays.com/v1/partner/transfer?currency=VND&app_id=%s&channel_id=%s&transaction_id=%s&amount=%d&payee_bank=%s&payee_account=%s&payee_name=%s&hash=%s&message=1&payee_account_type=%s') ,
  $fast2pay->app_id, 
  $fast2pay->channel_id,
  $transaction_id,
@@ -53,7 +53,8 @@ $amount = round($amount - $fee);
  $_POST['payee_bank'],
  $_POST['payee_account'],
  $_POST['payee_name'],
- sha1($fast2pay->app_id.":".$transaction_id.":".$amount.":".$_POST['payee_bank'].":".$_POST['payee_account'].":CARD_NUMBER:".$_POST['payee_name'].":0:".$fast2pay->channel_id."::VND:1:".$fast2pay->app_secret)
+ sha1($fast2pay->app_id.":".$transaction_id.":".$amount.":".$_POST['payee_bank'].":".$_POST['payee_account'].":".$_POST['payee_account_type'].":".$_POST['payee_name'].":0:".$fast2pay->channel_id."::VND:1:".$fast2pay->app_secret),
+ $_POST['payee_account_type']
 );   
 
 $response = wp_remote_get( $payment_url );
@@ -76,9 +77,12 @@ endif;
     <form method="post">
         <input type="hidden" name="payee_bank" value=""/>
         <p class="form-row address-field validate-required form-row-wide">
-            <label>Card number</label>
+            <label>Payee Type</label>
             <span class="woocommerce-input-wrapper">
-                <input type="text" class="input-text " name="payee_account" placeholder="The payee's card number" value="<?= isset($_POST['payee_account'])?$_POST['payee_account']:'' ?>">
+                <select name="payee_account_type" class="input-text">
+                    <option value="BANK_ACCOUNT">BANK ACCOUNT</option>
+                    <option value="CARD_NUMBER">CARD NUMBER</option>
+                </select>
             </span>
         </p>
         <p class="form-row address-field validate-required form-row-wide">
@@ -87,6 +91,13 @@ endif;
                 <input type="text" class="input-text " name="payee_name" placeholder="Enter name of payee" value="<?= isset($_POST['payee_name'])?$_POST['payee_name']:'' ?>">
             </span>
         </p>
+        <p class="form-row address-field validate-required form-row-wide">
+            <label>Bank number</label>
+            <span class="woocommerce-input-wrapper">
+                <input type="text" class="input-text " name="payee_account" placeholder="Enter bank account or card number" value="<?= isset($_POST['payee_account'])?$_POST['payee_account']:'' ?>">
+            </span>
+        </p>
+        
         <p class="form-row address-field validate-required form-row-wide">
             <label>Amount</label>
             <span class="woocommerce-input-wrapper">
